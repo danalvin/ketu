@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Image from "next/image"
+import Link from "next/link"
 
 interface Alert {
   id: string
@@ -152,9 +153,11 @@ export default function AlertsPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{alert.dateReported}</td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <Button variant="outline" size="sm">
-                              View Details
-                            </Button>
+                            <Link href={`/flagged-updates/${alert.id}`}>
+                              <Button variant="outline" size="sm">
+                                View Details
+                              </Button>
+                            </Link>
                           </td>
                         </tr>
                       ))}
