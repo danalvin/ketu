@@ -23,6 +23,9 @@ export default function Header() {
             <Link href="/alerts" className="text-gray-600 hover:text-gray-900 font-medium">
               Alerts & Trends
             </Link>
+            <Link href="/flagged-updates" className="text-gray-600 hover:text-gray-900 font-medium">
+              Flagged Updates
+            </Link>
           </nav>
 
           <div className="flex items-center gap-4">
