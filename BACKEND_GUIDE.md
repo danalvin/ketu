@@ -26,7 +26,7 @@ This guide outlines the backend architecture, setup instructions, and developmen
 
 ## Project Structure
 
-```
+\`\`\`
 backend/
 ├── app/
 │   ├── __init__.py
@@ -122,14 +122,14 @@ backend/
 ├── alembic.ini
 ├── pytest.ini
 └── README.md
-```
+\`\`\`
 
 ## Database Schema
 
 ### Core Tables
 
 #### Politicians Table
-```sql
+\`\`\`sql
 CREATE TABLE politicians (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
@@ -155,10 +155,10 @@ CREATE INDEX idx_politicians_name ON politicians USING gin(to_tsvector('english'
 CREATE INDEX idx_politicians_party ON politicians(party);
 CREATE INDEX idx_politicians_county ON politicians(county);
 CREATE INDEX idx_politicians_score ON politicians(transparency_score DESC);
-```
+\`\`\`
 
 #### Legal Cases Table
-```sql
+\`\`\`sql
 CREATE TABLE legal_cases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     politician_id UUID NOT NULL REFERENCES politicians(id) ON DELETE CASCADE,
@@ -181,10 +181,10 @@ CREATE TABLE legal_cases (
 
 CREATE INDEX idx_cases_politician ON legal_cases(politician_id);
 CREATE INDEX idx_cases_status ON legal_cases(status);
-```
+\`\`\`
 
 #### Promises Table
-```sql
+\`\`\`sql
 CREATE TABLE promises (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     politician_id UUID NOT NULL REFERENCES politicians(id) ON DELETE CASCADE,
@@ -206,10 +206,10 @@ CREATE TABLE promises (
 
 CREATE INDEX idx_promises_politician ON promises(politician_id);
 CREATE INDEX idx_promises_status ON promises(status);
-```
+\`\`\`
 
 #### Political Linkages Table
-```sql
+\`\`\`sql
 CREATE TABLE political_linkages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     politician_id UUID NOT NULL REFERENCES politicians(id) ON DELETE CASCADE,
@@ -229,10 +229,10 @@ CREATE TABLE political_linkages (
 
 CREATE INDEX idx_linkages_politician ON political_linkages(politician_id);
 CREATE INDEX idx_linkages_entity_type ON political_linkages(linked_entity_type);
-```
+\`\`\`
 
 #### Flagged Reports Table
-```sql
+\`\`\`sql
 CREATE TABLE flagged_reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     politician_id UUID NOT NULL REFERENCES politicians(id) ON DELETE CASCADE,
@@ -260,10 +260,10 @@ CREATE INDEX idx_reports_politician ON flagged_reports(politician_id);
 CREATE INDEX idx_reports_status ON flagged_reports(status);
 CREATE INDEX idx_reports_priority ON flagged_reports(priority);
 CREATE INDEX idx_reports_date ON flagged_reports(date_reported DESC);
-```
+\`\`\`
 
 #### Users Table
-```sql
+\`\`\`sql
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -282,10 +282,10 @@ CREATE TABLE users (
 
 CREATE UNIQUE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_role ON users(role);
-```
+\`\`\`
 
 #### Score History Table
-```sql
+\`\`\`sql
 CREATE TABLE score_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     politician_id UUID NOT NULL REFERENCES politicians(id) ON DELETE CASCADE,
@@ -299,10 +299,10 @@ CREATE TABLE score_history (
 
 CREATE INDEX idx_score_history_politician ON score_history(politician_id);
 CREATE INDEX idx_score_history_date ON score_history(calculated_at DESC);
-```
+\`\`\`
 
 #### News Mentions Table
-```sql
+\`\`\`sql
 CREATE TABLE news_mentions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     politician_id UUID NOT NULL REFERENCES politicians(id) ON DELETE CASCADE,
@@ -320,13 +320,13 @@ CREATE TABLE news_mentions (
 
 CREATE INDEX idx_news_politician ON news_mentions(politician_id);
 CREATE INDEX idx_news_published ON news_mentions(published_at DESC);
-```
+\`\`\`
 
 ## API Endpoints
 
 ### Authentication Endpoints
 
-```
+\`\`\`
 POST   /api/v1/auth/register          - Register new user
 POST   /api/v1/auth/login             - Login (returns JWT)
 POST   /api/v1/auth/refresh           - Refresh access token
@@ -335,11 +335,11 @@ GET    /api/v1/auth/me                - Get current user
 POST   /api/v1/auth/verify-email      - Verify email
 POST   /api/v1/auth/forgot-password   - Request password reset
 POST   /api/v1/auth/reset-password    - Reset password
-```
+\`\`\`
 
 ### Politicians Endpoints
 
-```
+\`\`\`
 GET    /api/v1/politicians                   - List politicians (paginated, filterable)
 GET    /api/v1/politicians/{id}              - Get politician details
 GET    /api/v1/politicians/{id}/cases        - Get politician's legal cases
@@ -351,58 +351,58 @@ GET    /api/v1/politicians/trending          - Get trending politicians
 POST   /api/v1/politicians                   - Create politician (admin)
 PATCH  /api/v1/politicians/{id}              - Update politician (admin)
 DELETE /api/v1/politicians/{id}              - Delete politician (admin)
-```
+\`\`\`
 
 ### Reports Endpoints
 
-```
+\`\`\`
 POST   /api/v1/reports                    - Submit new report
 GET    /api/v1/reports                    - List flagged reports (paginated)
 GET    /api/v1/reports/{id}               - Get report details
 PATCH  /api/v1/reports/{id}/status        - Update report status (moderator)
 POST   /api/v1/reports/{id}/evidence      - Upload evidence files
 GET    /api/v1/reports/my-reports         - Get current user's reports
-```
+\`\`\`
 
 ### Search Endpoints
 
-```
+\`\`\`
 GET    /api/v1/search                     - Global search
 GET    /api/v1/search/autocomplete        - Search suggestions
 GET    /api/v1/search/advanced            - Advanced search with filters
-```
+\`\`\`
 
 ### Statistics Endpoints
 
-```
+\`\`\`
 GET    /api/v1/stats/overview             - Platform overview stats
 GET    /api/v1/stats/scores               - Score distribution
 GET    /api/v1/stats/reports              - Report statistics
 GET    /api/v1/stats/trends               - Trending data
-```
+\`\`\`
 
 ### Alerts Endpoints
 
-```
+\`\`\`
 GET    /api/v1/alerts                     - Get recent alerts
 GET    /api/v1/alerts/feed                - Real-time alerts feed
 POST   /api/v1/alerts/subscribe           - Subscribe to alerts
-```
+\`\`\`
 
 ### Admin Endpoints
 
-```
+\`\`\`
 POST   /api/v1/admin/politicians/{id}/recalculate-score   - Trigger score recalculation
 GET    /api/v1/admin/reports/pending                      - Get pending reports queue
 PATCH  /api/v1/admin/users/{id}/role                      - Update user role
 GET    /api/v1/admin/users                                - List all users
 POST   /api/v1/admin/data/import                          - Bulk data import
 GET    /api/v1/admin/logs                                 - System logs
-```
+\`\`\`
 
 ## Environment Variables
 
-```env
+\`\`\`env
 # App Settings
 APP_NAME=Kenya ni Yetu API
 APP_ENV=development
@@ -444,12 +444,12 @@ EMAIL_FROM=noreply@kenyaniyetu.org
 # Rate Limiting
 RATE_LIMIT_PER_MINUTE=60
 RATE_LIMIT_PER_HOUR=1000
-```
+\`\`\`
 
 ## Setup Instructions
 
 ### 1. Prerequisites
-```bash
+\`\`\`bash
 # Install Python 3.11+
 python --version
 
@@ -458,10 +458,10 @@ psql --version
 
 # Install Redis
 redis-cli --version
-```
+\`\`\`
 
 ### 2. Clone & Setup
-```bash
+\`\`\`bash
 # Create backend directory
 mkdir backend && cd backend
 
@@ -471,10 +471,10 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies (will be created in Phase 1)
 pip install -r requirements.txt
-```
+\`\`\`
 
 ### 3. Database Setup
-```bash
+\`\`\`bash
 # Create database
 createdb kenya_ni_yetu
 
@@ -483,10 +483,10 @@ alembic upgrade head
 
 # Seed data (optional)
 python scripts/seed_data.py
-```
+\`\`\`
 
 ### 4. Run Development Server
-```bash
+\`\`\`bash
 # Start Redis
 redis-server
 
@@ -495,7 +495,7 @@ celery -A app.tasks.celery_app worker --loglevel=info
 
 # Start FastAPI server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
+\`\`\`
 
 ### 5. Access API
 - API: http://localhost:8000
@@ -506,19 +506,19 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ### Score Components
 
-```python
+\`\`\`python
 transparency_score = (
     legal_record_score * 0.30 +      # 30% weight
     promise_fulfillment_score * 0.30 + # 30% weight
     public_sentiment_score * 0.25 +    # 25% weight
     credential_verification_score * 0.15 # 15% weight
 )
-```
+\`\`\`
 
 ### Calculation Details
 
 **1. Legal Record Score (0-100)**
-```python
+\`\`\`python
 base_score = 100
 deductions = 0
 
@@ -529,10 +529,10 @@ for case in politician.cases:
         deductions += severity_weight[case.severity] * 0.5
 
 legal_record_score = max(0, base_score - deductions)
-```
+\`\`\`
 
 **2. Promise Fulfillment Score (0-100)**
-```python
+\`\`\`python
 total_promises = len(politician.promises)
 if total_promises == 0:
     return 50  # Neutral score
@@ -542,26 +542,26 @@ partially = count(status='partially_fulfilled')
 broken = count(status='broken')
 
 score = (fulfilled * 100 + partially * 50) / total_promises
-```
+\`\`\`
 
 **3. Public Sentiment Score (0-100)**
-```python
+\`\`\`python
 # Based on news mentions sentiment analysis
 recent_mentions = get_news_mentions(last_90_days)
 avg_sentiment = sum(m.sentiment for m in recent_mentions) / len(recent_mentions)
 
 # Convert from [-1, 1] to [0, 100]
 sentiment_score = (avg_sentiment + 1) * 50
-```
+\`\`\`
 
 **4. Credential Verification Score (0-100)**
-```python
+\`\`\`python
 # Based on verified education, experience
 verified_count = count_verified_credentials()
 total_claims = count_total_credentials()
 
 verification_score = (verified_count / total_claims) * 100
-```
+\`\`\`
 
 ## Security Best Practices
 
@@ -591,7 +591,7 @@ verification_score = (verified_count / total_claims) * 100
 
 ## Testing Strategy
 
-```bash
+\`\`\`bash
 # Run all tests
 pytest
 
@@ -603,7 +603,7 @@ pytest tests/test_politicians.py
 
 # Run with verbose output
 pytest -v
-```
+\`\`\`
 
 ### Test Categories
 - Unit tests for services
@@ -615,13 +615,13 @@ pytest -v
 ## Deployment
 
 ### Docker Deployment
-```bash
+\`\`\`bash
 # Build image
 docker build -t kenya-ni-yetu-api .
 
 # Run with docker-compose
 docker-compose up -d
-```
+\`\`\`
 
 ### Production Checklist
 - [ ] Set DEBUG=False
@@ -651,13 +651,13 @@ docker-compose up -d
 - Keep functions small and focused
 
 ### Commit Messages
-```
+\`\`\`
 feat: Add politician search endpoint
 fix: Resolve scoring calculation bug
 docs: Update API documentation
 test: Add tests for report service
 refactor: Simplify authentication logic
-```
+\`\`\`
 
 ### Branch Strategy
 - `main` - Production
