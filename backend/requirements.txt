@@ -34,7 +34,6 @@ python-slugify==8.0.1
 python-dateutil==2.8.2
 
 # CORS
-python-cors==1.0.0
 
 # File Handling
 python-magic==0.4.27

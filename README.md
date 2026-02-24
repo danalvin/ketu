@@ -87,9 +87,8 @@
    # File Upload (optional)
    BLOB_READ_WRITE_TOKEN=your-vercel-blob-token
    
-   # External APIs (when available)
-   TRANSPARENCY_API_URL=https://api.your-backend.com
-   TRANSPARENCY_API_KEY=your-api-key
+   # Backend API
+   NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
    \`\`\`
 
 4. **Run the development server**
@@ -212,8 +211,7 @@ CMD ["npm", "start"]
 | `NEXTAUTH_SECRET` | NextAuth.js secret key | No* | - |
 | `NEXTAUTH_URL` | NextAuth.js URL | No* | - |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob storage token | No | - |
-| `TRANSPARENCY_API_URL` | Backend API URL | No* | - |
-| `TRANSPARENCY_API_KEY` | Backend API key | No* | - |
+| `NEXT_PUBLIC_API_BASE_URL` | Backend API base URL | No* | `http://localhost:8000/api/v1` |
 
 *Required when integrating with backend services
 
@@ -241,7 +239,7 @@ The frontend is designed to work with a FastAPI backend. To integrate:
 Example API integration:
 \`\`\`typescript
 // lib/api.ts
-const API_BASE_URL = process.env.TRANSPARENCY_API_URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
 export async function fetchPoliticians() {
   const response = await fetch(`${API_BASE_URL}/politicians`)

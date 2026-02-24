@@ -1,30 +1,38 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Users, FileText, Clock, Zap } from "lucide-react"
+import { getOverviewStats } from "@/lib/api"
 
-export default function QuickStats() {
+export default async function QuickStats() {
+  let overview = null
+  try {
+    overview = await getOverviewStats()
+  } catch {
+    overview = null
+  }
+
   const stats = [
     {
       icon: Users,
       label: "Total Politicians Tracked",
-      value: "2,567",
+      value: overview ? String(overview.total_politicians) : "N/A",
       color: "text-green-600",
     },
     {
       icon: FileText,
       label: "Total Reports Submitted",
-      value: "12,890",
+      value: overview ? String(overview.total_reports) : "N/A",
       color: "text-blue-600",
     },
     {
       icon: Clock,
       label: "Last Database Update",
-      value: "2 hours ago",
+      value: overview ? "Live" : "Unavailable",
       color: "text-gray-600",
     },
     {
       icon: Zap,
-      label: "New Insights Daily",
-      value: "AI-Powered",
+      label: "Average Transparency",
+      value: overview ? `${Math.round(overview.average_transparency_score)}%` : "N/A",
       color: "text-yellow-600",
     },
   ]

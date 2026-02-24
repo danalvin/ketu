@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -8,137 +8,92 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Grid, List, Map } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-
-interface Politician {
-  id: string
-  name: string
-  position: string
-  party: string
-  county: string
-  score: number
-  photo: string
-}
+import { listPoliticians, Politician } from "@/lib/api"
 
 export default function ExplorePage() {
   const [viewMode, setViewMode] = useState<"grid" | "list" | "map">("grid")
   const [currentPage, setCurrentPage] = useState(1)
+  const [countyFilter, setCountyFilter] = useState("all")
+  const [partyFilter, setPartyFilter] = useState("all")
+  const [sortBy, setSortBy] = useState("score")
+  const [politicians, setPoliticians] = useState<Politician[]>([])
 
-  const politicians: Politician[] = [
-    {
-      id: "1",
-      name: "Hon. Sarah Wanjiku",
-      position: "Member of Parliament",
-      party: "Unity Alliance Party",
-      county: "Nairobi County",
-      score: 85,
-      photo: "/placeholder.svg?height=80&width=80&text=Sarah+Wanjiku",
-    },
-    {
-      id: "2",
-      name: "Mr. David Kimani",
-      position: "County Governor",
-      party: "Democratic Reform Party",
-      county: "Nakuru County",
-      score: 78,
-      photo: "/placeholder.svg?height=80&width=80&text=David+Kimani",
-    },
-    {
-      id: "3",
-      name: "Dr. Aisha Hassan",
-      position: "Senator",
-      party: "Progressive Vision Movement",
-      county: "Mombasa County",
-      score: 92,
-      photo: "/placeholder.svg?height=80&width=80&text=Aisha+Hassan",
-    },
-    {
-      id: "4",
-      name: "Eng. John Otieno",
-      position: "County Assembly Member",
-      party: "People's Justice Party",
-      county: "Kisumu County",
-      score: 65,
-      photo: "/placeholder.svg?height=80&width=80&text=John+Otieno",
-    },
-    {
-      id: "5",
-      name: "Madam Grace Nyambura",
-      position: "Women Representative",
-      party: "United Citizens Front",
-      county: "Mombasa County",
-      score: 88,
-      photo: "/placeholder.svg?height=80&width=80&text=Grace+Nyambura",
-    },
-    {
-      id: "6",
-      name: "Chief Alex Kipkemboi",
-      position: "Chief Administrative Secretary",
-      party: "National Development Party",
-      county: "Kericho County",
-      score: 70,
-      photo: "/placeholder.svg?height=80&width=80&text=Alex+Kipkemboi",
-    },
-    {
-      id: "7",
-      name: "Ms. Amina Rashid",
-      position: "Cabinet Secretary",
-      party: "Front for Change",
-      county: "Garissa County",
-      score: 95,
-      photo: "/placeholder.svg?height=80&width=80&text=Amina+Rashid",
-    },
-    {
-      id: "8",
-      name: "Mr. Peter Kamau",
-      position: "Principal Secretary",
-      party: "Justice & Equity Party",
-      county: "Murang'a County",
-      score: 72,
-      photo: "/placeholder.svg?height=80&width=80&text=Peter+Kamau",
-    },
-  ]
+  useEffect(() => {
+    let isMounted = true
 
-  const getPartyColor = (party: string) => {
-    const colors: { [key: string]: string } = {
-      "Unity Alliance Party": "bg-red-100 text-red-800",
-      "Democratic Reform Party": "bg-blue-100 text-blue-800",
-      "Progressive Vision Movement": "bg-green-100 text-green-800",
-      "People's Justice Party": "bg-purple-100 text-purple-800",
-      "United Citizens Front": "bg-yellow-100 text-yellow-800",
-      "National Development Party": "bg-indigo-100 text-indigo-800",
-      "Front for Change": "bg-pink-100 text-pink-800",
-      "Justice & Equity Party": "bg-teal-100 text-teal-800",
+    async function loadPoliticians() {
+      try {
+        const response = await listPoliticians({
+          page: currentPage,
+          page_size: 24,
+          county: countyFilter !== "all" ? countyFilter : undefined,
+          party: partyFilter !== "all" ? partyFilter : undefined,
+          is_active: true,
+        })
+
+        if (isMounted) {
+          setPoliticians(response.items)
+        }
+      } catch {
+        if (isMounted) {
+          setPoliticians([])
+        }
+      }
     }
-    return colors[party] || "bg-gray-100 text-gray-800"
-  }
 
-  const renderPoliticianCard = (politician: Politician) => (
-    <Link key={politician.id} href={`/politician/${politician.id}`}>
-      <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <Image
-              src={politician.photo || "/placeholder.svg"}
-              alt={politician.name}
-              width={80}
-              height={80}
-              className="rounded-full object-cover"
-            />
-            <div className="flex-1">
-              <h3 className="font-semibold text-lg text-gray-900">{politician.name}</h3>
-              <p className="text-gray-600">{politician.position}</p>
-              <p className="text-sm text-gray-500">{politician.county}</p>
-              <Badge className={`mt-2 ${getPartyColor(politician.party)}`}>{politician.party}</Badge>
+    void loadPoliticians()
+    return () => {
+      isMounted = false
+    }
+  }, [currentPage, countyFilter, partyFilter])
+
+  const sortedPoliticians = useMemo(() => {
+    const items = [...politicians]
+    if (sortBy === "name") {
+      items.sort((a, b) => a.name.localeCompare(b.name))
+    } else if (sortBy === "party") {
+      items.sort((a, b) => (a.party || "").localeCompare(b.party || ""))
+    } else if (sortBy === "county") {
+      items.sort((a, b) => (a.county || "").localeCompare(b.county || ""))
+    } else {
+      items.sort((a, b) => Number(b.transparency_score) - Number(a.transparency_score))
+    }
+    return items
+  }, [politicians, sortBy])
+
+  const countyOptions = Array.from(new Set(politicians.map((p) => p.county).filter(Boolean) as string[])).sort()
+  const partyOptions = Array.from(new Set(politicians.map((p) => p.party).filter(Boolean) as string[])).sort()
+
+  const renderPoliticianCard = (politician: Politician) => {
+    const score = Math.round(Number(politician.transparency_score))
+    return (
+      <Link key={politician.id} href={`/politician/${politician.id}`}>
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <Image
+                src={politician.photo_url || "/placeholder.svg"}
+                alt={politician.name}
+                width={80}
+                height={80}
+                className="rounded-full object-cover"
+              />
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg text-gray-900">{politician.name}</h3>
+                <p className="text-gray-600">{politician.position}</p>
+                <p className="text-sm text-gray-500">{politician.county || "County unavailable"}</p>
+                <Badge className="mt-2 bg-gray-100 text-gray-800">{politician.party || "Independent"}</Badge>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-green-600">{score}</div>
+                <div className="text-sm text-gray-500">Score</div>
+              </div>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-green-600">{politician.score}</div>
-              <div className="text-sm text-gray-500">Score</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
-  )
+          </CardContent>
+        </Card>
+      </Link>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -178,32 +133,35 @@ export default function ExplorePage() {
             </div>
 
             <div className="flex gap-4">
-              <Select>
+              <Select value={countyFilter} onValueChange={setCountyFilter}>
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Filter by County" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Counties</SelectItem>
-                  <SelectItem value="nairobi">Nairobi</SelectItem>
-                  <SelectItem value="mombasa">Mombasa</SelectItem>
-                  <SelectItem value="kisumu">Kisumu</SelectItem>
-                  <SelectItem value="nakuru">Nakuru</SelectItem>
+                  {countyOptions.map((county) => (
+                    <SelectItem key={county} value={county}>
+                      {county}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
-              <Select>
-                <SelectTrigger className="w-40">
+              <Select value={partyFilter} onValueChange={setPartyFilter}>
+                <SelectTrigger className="w-48">
                   <SelectValue placeholder="Filter by Party" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Parties</SelectItem>
-                  <SelectItem value="unity">Unity Alliance Party</SelectItem>
-                  <SelectItem value="democratic">Democratic Reform Party</SelectItem>
-                  <SelectItem value="progressive">Progressive Vision Movement</SelectItem>
+                  {partyOptions.map((party) => (
+                    <SelectItem key={party} value={party}>
+                      {party}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
-              <Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-32">
                   <SelectValue placeholder="Sort By" />
                 </SelectTrigger>
@@ -224,17 +182,16 @@ export default function ExplorePage() {
               <div className="text-center text-gray-500">
                 <Map className="h-16 w-16 mx-auto mb-4 text-gray-300" />
                 <p className="text-lg font-medium">Map View</p>
-                <p className="text-sm">Interactive map showing politicians by county</p>
+                <p className="text-sm">Interactive county map is planned for the next phase.</p>
               </div>
             </CardContent>
           </Card>
         ) : (
           <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-6" : "space-y-4"}>
-            {politicians.map(renderPoliticianCard)}
+            {sortedPoliticians.map(renderPoliticianCard)}
           </div>
         )}
 
-        {/* Pagination */}
         <div className="flex items-center justify-center gap-2 mt-8">
           <Button
             variant="outline"
@@ -244,11 +201,8 @@ export default function ExplorePage() {
           >
             Previous
           </Button>
-          <Button variant="outline" size="sm" className="bg-green-600 text-white">
-            1
-          </Button>
-          <Button variant="outline" size="sm">
-            2
+          <Button variant="outline" size="sm" className="bg-green-600 text-white hover:bg-green-700">
+            {currentPage}
           </Button>
           <Button variant="outline" size="sm" onClick={() => setCurrentPage(currentPage + 1)}>
             Next
