@@ -1,0 +1,2 @@
+politician_name,title,description,date_made,deadline,status,category,fulfillment_percentage,verification_sources,impact_area
+William Ruto,Example Promise Title,Example detailed promise description.,2022-09-15,2027-09-15,in_progress,Economy,35,https://example.com/promise-source-1|https://example.com/promise-source-2,Cost of Living

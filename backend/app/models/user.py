@@ -13,6 +13,10 @@ class UserRole(str, enum.Enum):
     ADMIN = "admin"
 
 
+def _enum_values(enum_cls):
+    return [item.value for item in enum_cls]
+
+
 class User(Base):
     """User model for authentication and authorization."""
 
@@ -22,7 +26,11 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=True)
-    role = Column(SQLEnum(UserRole), nullable=False, default=UserRole.USER)
+    role = Column(
+        SQLEnum(UserRole, values_callable=_enum_values, name="userrole"),
+        nullable=False,
+        default=UserRole.USER,
+    )
     is_active = Column(Boolean, default=True, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
     verification_token = Column(String(255), nullable=True)

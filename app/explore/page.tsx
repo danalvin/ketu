@@ -13,6 +13,7 @@ import { listPoliticians, Politician } from "@/lib/api"
 export default function ExplorePage() {
   const [viewMode, setViewMode] = useState<"grid" | "list" | "map">("grid")
   const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [countyFilter, setCountyFilter] = useState("all")
   const [partyFilter, setPartyFilter] = useState("all")
   const [sortBy, setSortBy] = useState("score")
@@ -33,10 +34,12 @@ export default function ExplorePage() {
 
         if (isMounted) {
           setPoliticians(response.items)
+          setTotalPages(Math.max(1, response.total_pages || 1))
         }
       } catch {
         if (isMounted) {
           setPoliticians([])
+          setTotalPages(1)
         }
       }
     }
@@ -46,6 +49,12 @@ export default function ExplorePage() {
       isMounted = false
     }
   }, [currentPage, countyFilter, partyFilter])
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
 
   const sortedPoliticians = useMemo(() => {
     const items = [...politicians]
@@ -60,6 +69,17 @@ export default function ExplorePage() {
     }
     return items
   }, [politicians, sortBy])
+
+  const pageNumbers = useMemo(() => {
+    const windowSize = 2
+    const start = Math.max(1, currentPage - windowSize)
+    const end = Math.min(totalPages, currentPage + windowSize)
+    const pages: number[] = []
+    for (let page = start; page <= end; page += 1) {
+      pages.push(page)
+    }
+    return pages
+  }, [currentPage, totalPages])
 
   const countyOptions = Array.from(new Set(politicians.map((p) => p.county).filter(Boolean) as string[])).sort()
   const partyOptions = Array.from(new Set(politicians.map((p) => p.party).filter(Boolean) as string[])).sort()
@@ -133,7 +153,13 @@ export default function ExplorePage() {
             </div>
 
             <div className="flex gap-4">
-              <Select value={countyFilter} onValueChange={setCountyFilter}>
+              <Select
+                value={countyFilter}
+                onValueChange={(value) => {
+                  setCountyFilter(value)
+                  setCurrentPage(1)
+                }}
+              >
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Filter by County" />
                 </SelectTrigger>
@@ -147,7 +173,13 @@ export default function ExplorePage() {
                 </SelectContent>
               </Select>
 
-              <Select value={partyFilter} onValueChange={setPartyFilter}>
+              <Select
+                value={partyFilter}
+                onValueChange={(value) => {
+                  setPartyFilter(value)
+                  setCurrentPage(1)
+                }}
+              >
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="Filter by Party" />
                 </SelectTrigger>
@@ -201,10 +233,45 @@ export default function ExplorePage() {
           >
             Previous
           </Button>
-          <Button variant="outline" size="sm" className="bg-green-600 text-white hover:bg-green-700">
-            {currentPage}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setCurrentPage(currentPage + 1)}>
+
+          {pageNumbers[0] > 1 ? (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)}>
+                1
+              </Button>
+              {pageNumbers[0] > 2 ? <span className="px-2 text-sm text-gray-500">...</span> : null}
+            </>
+          ) : null}
+
+          {pageNumbers.map((page) => (
+            <Button
+              key={page}
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(page)}
+              className={page === currentPage ? "bg-green-600 text-white hover:bg-green-700" : ""}
+            >
+              {page}
+            </Button>
+          ))}
+
+          {pageNumbers[pageNumbers.length - 1] < totalPages ? (
+            <>
+              {pageNumbers[pageNumbers.length - 1] < totalPages - 1 ? (
+                <span className="px-2 text-sm text-gray-500">...</span>
+              ) : null}
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)}>
+                {totalPages}
+              </Button>
+            </>
+          ) : null}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage >= totalPages}
+          >
             Next
           </Button>
         </div>

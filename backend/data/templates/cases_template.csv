@@ -1,0 +1,2 @@
+politician_name,title,status,case_number,court,date_filed,date_resolved,severity,category,description,outcome,impact_score,source_urls
+William Ruto,Example Case Title,pending,,High Court of Kenya,2025-01-15,,medium,Corruption,Example description for case.,,60,https://example.com/source-1|https://example.com/source-2

@@ -239,6 +239,18 @@ After starting the server, register a user and manually update their role in the
 UPDATE users SET role = 'admin' WHERE email = 'admin@example.com';
 ```
 
+### Import Real Data
+
+Use the data ingestion script:
+
+```bash
+python scripts/import_real_data.py --source wikidata --limit 200 --export-file data/raw/wikidata_politicians.json --dry-run
+python scripts/import_real_data.py --source json --politicians-file data/curated/politicians.json --cases-file data/curated/cases.csv --promises-file data/curated/promises.csv
+python scripts/recalculate_scores.py
+```
+
+See detailed workflow in `DATA_INGESTION.md`.
+
 ### Reset Database
 
 ```bash

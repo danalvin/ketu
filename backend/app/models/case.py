@@ -24,6 +24,10 @@ class CaseSeverity(str, enum.Enum):
     CRITICAL = "critical"
 
 
+def _enum_values(enum_cls):
+    return [item.value for item in enum_cls]
+
+
 class LegalCase(Base):
     """Legal case model."""
 
@@ -34,10 +38,15 @@ class LegalCase(Base):
     case_number = Column(String(100), unique=True, nullable=True)
     title = Column(String(500), nullable=False)
     court = Column(String(255), nullable=True)
-    status = Column(SQLEnum(CaseStatus), nullable=False, default=CaseStatus.PENDING, index=True)
+    status = Column(
+        SQLEnum(CaseStatus, values_callable=_enum_values, name="casestatus"),
+        nullable=False,
+        default=CaseStatus.PENDING,
+        index=True,
+    )
     date_filed = Column(Date, nullable=True)
     date_resolved = Column(Date, nullable=True)
-    severity = Column(SQLEnum(CaseSeverity), nullable=True)
+    severity = Column(SQLEnum(CaseSeverity, values_callable=_enum_values, name="caseseverity"), nullable=True)
     category = Column(String(100), nullable=True)
     description = Column(Text, nullable=True)
     outcome = Column(Text, nullable=True)

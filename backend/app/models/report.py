@@ -24,6 +24,10 @@ class ReportPriority(str, enum.Enum):
     CRITICAL = "critical"
 
 
+def _enum_values(enum_cls):
+    return [item.value for item in enum_cls]
+
+
 class FlaggedReport(Base):
     """Flagged report model."""
 
@@ -35,8 +39,18 @@ class FlaggedReport(Base):
     issue_type = Column(String(100), nullable=False)
     title = Column(String(500), nullable=False)
     description = Column(Text, nullable=False)
-    status = Column(SQLEnum(ReportStatus), nullable=False, default=ReportStatus.UNDER_REVIEW, index=True)
-    priority = Column(SQLEnum(ReportPriority), nullable=False, default=ReportPriority.MEDIUM, index=True)
+    status = Column(
+        SQLEnum(ReportStatus, values_callable=_enum_values, name="reportstatus"),
+        nullable=False,
+        default=ReportStatus.UNDER_REVIEW,
+        index=True,
+    )
+    priority = Column(
+        SQLEnum(ReportPriority, values_callable=_enum_values, name="reportpriority"),
+        nullable=False,
+        default=ReportPriority.MEDIUM,
+        index=True,
+    )
     evidence_files = Column(JSONB, nullable=True)
     location = Column(String(255), nullable=True)
     incident_date = Column(Date, nullable=True)

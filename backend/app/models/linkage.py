@@ -15,6 +15,10 @@ class LinkedEntityType(str, enum.Enum):
     GOVERNMENT_ENTITY = "government_entity"
 
 
+def _enum_values(enum_cls):
+    return [item.value for item in enum_cls]
+
+
 class PoliticalLinkage(Base):
     """Political linkage model."""
 
@@ -22,7 +26,11 @@ class PoliticalLinkage(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     politician_id = Column(UUID(as_uuid=True), ForeignKey("politicians.id", ondelete="CASCADE"), nullable=False, index=True)
-    linked_entity_type = Column(SQLEnum(LinkedEntityType), nullable=False, index=True)
+    linked_entity_type = Column(
+        SQLEnum(LinkedEntityType, values_callable=_enum_values, name="linkedentitytype"),
+        nullable=False,
+        index=True,
+    )
     linked_entity_id = Column(UUID(as_uuid=True), nullable=True)
     linked_entity_name = Column(String(255), nullable=False)
     relationship_type = Column(String(100), nullable=False)

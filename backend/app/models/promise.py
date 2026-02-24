@@ -16,6 +16,10 @@ class PromiseStatus(str, enum.Enum):
     PARTIALLY_FULFILLED = "partially_fulfilled"
 
 
+def _enum_values(enum_cls):
+    return [item.value for item in enum_cls]
+
+
 class Promise(Base):
     """Promise model."""
 
@@ -27,7 +31,12 @@ class Promise(Base):
     description = Column(Text, nullable=False)
     date_made = Column(Date, nullable=False)
     deadline = Column(Date, nullable=True)
-    status = Column(SQLEnum(PromiseStatus), nullable=False, default=PromiseStatus.PENDING, index=True)
+    status = Column(
+        SQLEnum(PromiseStatus, values_callable=_enum_values, name="promisestatus"),
+        nullable=False,
+        default=PromiseStatus.PENDING,
+        index=True,
+    )
     category = Column(String(100), nullable=True)
     evidence = Column(JSONB, nullable=True)
     fulfillment_percentage = Column(Integer, default=0, nullable=False)

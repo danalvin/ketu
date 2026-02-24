@@ -20,33 +20,38 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    user_role_enum = sa.Enum("user", "moderator", "admin", name="userrole")
-    case_status_enum = sa.Enum("pending", "ongoing", "resolved", "dismissed", "appealed", name="casestatus")
-    case_severity_enum = sa.Enum("low", "medium", "high", "critical", name="caseseverity")
-    promise_status_enum = sa.Enum(
+    user_role_enum = postgresql.ENUM("user", "moderator", "admin", name="userrole", create_type=False)
+    case_status_enum = postgresql.ENUM(
+        "pending", "ongoing", "resolved", "dismissed", "appealed", name="casestatus", create_type=False
+    )
+    case_severity_enum = postgresql.ENUM("low", "medium", "high", "critical", name="caseseverity", create_type=False)
+    promise_status_enum = postgresql.ENUM(
         "pending",
         "in_progress",
         "fulfilled",
         "broken",
         "partially_fulfilled",
         name="promisestatus",
+        create_type=False,
     )
-    linked_entity_type_enum = sa.Enum(
+    linked_entity_type_enum = postgresql.ENUM(
         "person",
         "company",
         "organization",
         "government_entity",
         name="linkedentitytype",
+        create_type=False,
     )
-    report_status_enum = sa.Enum(
+    report_status_enum = postgresql.ENUM(
         "under_review",
         "investigating",
         "verified",
         "dismissed",
         "resolved",
         name="reportstatus",
+        create_type=False,
     )
-    report_priority_enum = sa.Enum("low", "medium", "high", "critical", name="reportpriority")
+    report_priority_enum = postgresql.ENUM("low", "medium", "high", "critical", name="reportpriority", create_type=False)
 
     bind = op.get_bind()
     user_role_enum.create(bind, checkfirst=True)
