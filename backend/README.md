@@ -244,8 +244,12 @@ UPDATE users SET role = 'admin' WHERE email = 'admin@example.com';
 Use the data ingestion script:
 
 ```bash
-python scripts/import_real_data.py --source wikidata --limit 200 --export-file data/raw/wikidata_politicians.json --dry-run
-python scripts/import_real_data.py --source json --politicians-file data/curated/politicians.json --cases-file data/curated/cases.csv --promises-file data/curated/promises.csv
+alembic upgrade head
+alembic current
+python scripts/import_real_data.py --source wikidata --limit 1500 --strict-political --include-history --export-file data/raw/wikidata_politicians.json --dry-run
+python scripts/scrape_parliament_profiles.py --source both --seed-file data/curated/politicians.json --discover --output-file data/raw/parliamentary_profiles_scraped.json --failed-file data/raw/parliamentary_profiles_failed.json
+python scripts/import_real_data.py --source json --politicians-file data/curated/politicians.json --parliament-profiles-file data/curated/parliamentary_profiles.json --cases-file data/curated/cases.csv --promises-file data/curated/promises.csv
+python scripts/recalculate_scores.py --dry-run
 python scripts/recalculate_scores.py
 ```
 

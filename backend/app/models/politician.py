@@ -16,9 +16,15 @@ class Politician(Base):
     position = Column(String(255), nullable=False)
     party = Column(String(100), nullable=True, index=True)
     county = Column(String(100), nullable=True, index=True)
+    constituency = Column(String(150), nullable=True, index=True)
+    parliamentary_role = Column(String(100), nullable=True)
+    parliamentary_profile_url = Column(Text, nullable=True)
+    parliamentary_profile = Column(JSONB, nullable=True)
     photo_url = Column(Text, nullable=True)
     bio = Column(Text, nullable=True)
+    history = Column(Text, nullable=True)
     date_of_birth = Column(Date, nullable=True)
+    date_of_death = Column(Date, nullable=True)
     education = Column(JSONB, nullable=True)
     contact_info = Column(JSONB, nullable=True)
     social_media = Column(JSONB, nullable=True)
@@ -38,3 +44,7 @@ class Politician(Base):
 
     def __repr__(self):
         return f"<Politician(id={self.id}, name={self.name}, position={self.position})>"
+
+    @property
+    def is_alive(self) -> bool:
+        return self.date_of_death is None

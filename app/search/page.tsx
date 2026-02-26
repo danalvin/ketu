@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider"
 import Image from "next/image"
 import Link from "next/link"
-import { listPoliticians, Politician } from "@/lib/api"
+import { getStatsByCounty, getStatsByParty, listPoliticians, Politician } from "@/lib/api"
 
 function SearchResults() {
   const searchParams = useSearchParams()
@@ -22,6 +22,8 @@ function SearchResults() {
   const [scoreRange, setScoreRange] = useState([0, 100])
   const [loading, setLoading] = useState(true)
   const [results, setResults] = useState<Politician[]>([])
+  const [countyOptions, setCountyOptions] = useState<string[]>([])
+  const [partyOptions, setPartyOptions] = useState<string[]>([])
 
   useEffect(() => {
     setQuery(queryFromUrl)
@@ -65,6 +67,28 @@ function SearchResults() {
     }
   }, [query, party, county, position, scoreRange])
 
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadFilters() {
+      try {
+        const [counties, parties] = await Promise.all([getStatsByCounty(), getStatsByParty()])
+        if (!isMounted) return
+        setCountyOptions(counties.map((item) => item.county).filter(Boolean).sort((a, b) => a.localeCompare(b)))
+        setPartyOptions(parties.map((item) => item.party).filter(Boolean).sort((a, b) => a.localeCompare(b)))
+      } catch {
+        if (!isMounted) return
+        setCountyOptions([])
+        setPartyOptions([])
+      }
+    }
+
+    void loadFilters()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Results ({results.length})</h2>
@@ -79,11 +103,11 @@ function SearchResults() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Parties</SelectItem>
-                <SelectItem value="ODM">ODM</SelectItem>
-                <SelectItem value="UDA">UDA</SelectItem>
-                <SelectItem value="NARC-Kenya">NARC-Kenya</SelectItem>
-                <SelectItem value="Wiper Democratic Movement">Wiper Democratic Movement</SelectItem>
-                <SelectItem value="ANC">ANC</SelectItem>
+                {partyOptions.map((partyOption) => (
+                  <SelectItem key={partyOption} value={partyOption}>
+                    {partyOption}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -96,10 +120,11 @@ function SearchResults() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Counties</SelectItem>
-                <SelectItem value="Nairobi">Nairobi</SelectItem>
-                <SelectItem value="Mombasa">Mombasa</SelectItem>
-                <SelectItem value="Kisumu">Kisumu</SelectItem>
-                <SelectItem value="Nakuru">Nakuru</SelectItem>
+                {countyOptions.map((countyOption) => (
+                  <SelectItem key={countyOption} value={countyOption}>
+                    {countyOption}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -153,15 +178,23 @@ function SearchResults() {
                         alt={politician.name}
                         width={80}
                         height={80}
-                        className="rounded-full object-cover"
+                        className="h-20 w-20 rounded-full object-cover flex-shrink-0"
                       />
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg text-gray-900">{politician.name}</h3>
                         <p className="text-gray-600">{politician.position}</p>
                         <p className="text-sm text-gray-500">{politician.county || "County not set"}</p>
-                        <Badge variant="outline" className="mt-2 bg-gray-100 text-gray-800">
-                          {politician.party || "Independent"}
-                        </Badge>
+                        {politician.constituency ? (
+                          <p className="text-xs text-gray-500">{politician.constituency} Constituency</p>
+                        ) : null}
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <Badge variant="outline" className="bg-gray-100 text-gray-800">
+                            {politician.party || "Independent"}
+                          </Badge>
+                          <Badge variant="outline" className={politician.is_alive ? "text-emerald-700" : "text-rose-700"}>
+                            {politician.is_alive ? "Alive" : "Deceased"}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
                     <div className="mt-4">

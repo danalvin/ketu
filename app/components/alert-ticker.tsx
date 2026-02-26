@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { AlertTriangle, TrendingUp } from "lucide-react"
+import Link from "next/link"
 
 interface Alert {
   id: string
@@ -34,7 +35,7 @@ export default function AlertTicker() {
   return (
     <div className="bg-red-600 text-white py-3 overflow-hidden">
       <div className="container mx-auto px-4">
-        <div className="flex items-center gap-3 animate-pulse">
+        <Link href="/alerts" className="flex items-center gap-3 animate-pulse hover:opacity-90">
           {currentAlert.type === "urgent" ? (
             <AlertTriangle className="h-5 w-5 flex-shrink-0" />
           ) : (
@@ -44,7 +45,7 @@ export default function AlertTicker() {
             <span className="font-medium">{currentAlert.message}</span>
             <span className="ml-3 text-red-200 text-sm">• {currentAlert.timestamp}</span>
           </div>
-        </div>
+        </Link>
       </div>
     </div>
   )

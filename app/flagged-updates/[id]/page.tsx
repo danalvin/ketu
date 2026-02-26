@@ -109,7 +109,7 @@ export default async function FlaggedUpdateDetail({ params }: FlaggedUpdateDetai
                   alt={update.politician_name}
                   width={120}
                   height={120}
-                  className="rounded-full object-cover"
+                  className="h-24 w-24 rounded-full object-cover"
                 />
                 <div>
                   <div className="flex items-center gap-2 mb-2">

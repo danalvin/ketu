@@ -1,0 +1,70 @@
+[
+  {
+    "name": "Abdirahman Hussein Weytan Mohamed",
+    "position": "Member of the National Assembly",
+    "party": "Orange Democratic Movement",
+    "county": "Mandera",
+    "constituency": "Lafey",
+    "parliamentary_role": "elected_constituency",
+    "parliamentary_profile_url": "https://mzalendo.com/parliament/politician/abdirahman-hussein-weytan-mohamed/",
+    "bio": "Elected Member of the National Assembly for Lafey Constituency (Mandera County) in the 13th Parliament.",
+    "history": "Kenyan legislator representing Lafey Constituency in the 13th Parliament under ODM.",
+    "parliamentary_profile": {
+      "current_positions": [
+        {
+          "title": "Member of the 13th Parliament",
+          "start_date": "2022-09-08",
+          "end_date": null
+        }
+      ],
+      "committee_memberships": [
+        "Administration and Internal Security",
+        "Transport and Infrastructure"
+      ],
+      "parliamentary_activity": {
+        "speeches_last_year": 18,
+        "total_speeches": 42,
+        "bills_sponsored": 0
+      },
+      "recent_contributions": [
+        {
+          "category": "Statements",
+          "date": "2025-11-26",
+          "title": "Response to Statements",
+          "subtype": "Ministerial Statement",
+          "session": "1 speech in 1 contribution",
+          "speech_count": 1,
+          "contribution_count": 1,
+          "excerpt": "I rise to contribute to the State of the Nation Address by His Excellency the President..."
+        },
+        {
+          "category": "Questions & Answers",
+          "date": "2024-11-28",
+          "title": "Questions and Statements",
+          "subtype": "Question Time",
+          "session": "1 speech in 1 contribution",
+          "speech_count": 1,
+          "contribution_count": 1,
+          "excerpt": "I take this opportunity to thank Hon. Hussain, the Member for Tarbaj, for requesting this Statement..."
+        }
+      ],
+      "voting_history": [
+        {
+          "date": "2025-07-01",
+          "motion": "The Constitution of Kenya (Amendment) Bill 4 of 2025",
+          "decision": "Yes"
+        },
+        {
+          "date": "2024-10-08",
+          "motion": "Rigathi Gachagua Impeachment",
+          "decision": "Yes"
+        },
+        {
+          "date": "2024-06-20",
+          "motion": "Finance Bill 2024 (2nd Reading)",
+          "decision": "No"
+        }
+      ]
+    }
+  }
+]

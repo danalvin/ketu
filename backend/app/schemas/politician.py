@@ -11,9 +11,15 @@ class PoliticianBase(BaseModel):
     position: str = Field(..., min_length=1, max_length=255)
     party: Optional[str] = Field(None, max_length=100)
     county: Optional[str] = Field(None, max_length=100)
+    constituency: Optional[str] = Field(None, max_length=150)
+    parliamentary_role: Optional[str] = Field(None, max_length=100)
+    parliamentary_profile_url: Optional[str] = None
+    parliamentary_profile: Optional[Dict[str, Any]] = None
     photo_url: Optional[str] = None
     bio: Optional[str] = None
+    history: Optional[str] = None
     date_of_birth: Optional[date] = None
+    date_of_death: Optional[date] = None
     education: Optional[Dict[str, Any]] = None
     contact_info: Optional[Dict[str, Any]] = None
     social_media: Optional[Dict[str, Any]] = None
@@ -30,9 +36,15 @@ class PoliticianUpdate(BaseModel):
     position: Optional[str] = Field(None, min_length=1, max_length=255)
     party: Optional[str] = Field(None, max_length=100)
     county: Optional[str] = Field(None, max_length=100)
+    constituency: Optional[str] = Field(None, max_length=150)
+    parliamentary_role: Optional[str] = Field(None, max_length=100)
+    parliamentary_profile_url: Optional[str] = None
+    parliamentary_profile: Optional[Dict[str, Any]] = None
     photo_url: Optional[str] = None
     bio: Optional[str] = None
+    history: Optional[str] = None
     date_of_birth: Optional[date] = None
+    date_of_death: Optional[date] = None
     education: Optional[Dict[str, Any]] = None
     contact_info: Optional[Dict[str, Any]] = None
     social_media: Optional[Dict[str, Any]] = None
@@ -53,6 +65,7 @@ class PoliticianResponse(PoliticianBase):
     transparency_score: Decimal
     confidence_level: Decimal
     is_active: bool
+    is_alive: bool
     created_at: datetime
     updated_at: datetime
 
@@ -73,6 +86,7 @@ class PoliticianListFilter(BaseModel):
     search: Optional[str] = None
     party: Optional[str] = None
     county: Optional[str] = None
+    constituency: Optional[str] = None
     position: Optional[str] = None
     min_score: Optional[Decimal] = Field(None, ge=0, le=100)
     max_score: Optional[Decimal] = Field(None, ge=0, le=100)

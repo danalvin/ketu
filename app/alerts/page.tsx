@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { getTopPoliticians, listPublicReports, PublicReport } from "@/lib/api"
 
 function toLabel(value: string) {
@@ -25,6 +26,7 @@ interface TrendingPolitician {
 }
 
 export default function AlertsPage() {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState("all")
   const [alerts, setAlerts] = useState<PublicReport[]>([])
   const [trendingPoliticians, setTrendingPoliticians] = useState<TrendingPolitician[]>([])
@@ -44,17 +46,17 @@ export default function AlertsPage() {
         setAlerts(reportsResponse.items)
 
         const highest = topResponse.highest_scored.map((item, idx) => ({
-          id: `high-${idx}`,
+          id: item.id || `high-${idx}`,
           name: item.name,
-          photo: "/placeholder.svg",
+          photo: item.photo_url || "/placeholder.svg",
           score: Math.round(Number(item.transparency_score)),
           trend: "high" as const,
         }))
 
         const lowest = topResponse.lowest_scored.map((item, idx) => ({
-          id: `low-${idx}`,
+          id: item.id || `low-${idx}`,
           name: item.name,
-          photo: "/placeholder.svg",
+          photo: item.photo_url || "/placeholder.svg",
           score: Math.round(Number(item.transparency_score)),
           trend: "low" as const,
         }))
@@ -135,7 +137,11 @@ export default function AlertsPage() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredAlerts.map((alert) => (
-                        <tr key={alert.id} className="hover:bg-gray-50">
+                        <tr
+                          key={alert.id}
+                          className="hover:bg-gray-50 cursor-pointer"
+                          onClick={() => router.push(`/flagged-updates/${alert.id}`)}
+                        >
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {alert.id.slice(0, 8)}
                           </td>
@@ -169,30 +175,32 @@ export default function AlertsPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Top and Bottom Transparency Scores</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {trendingPoliticians.map((politician) => (
-                <Card key={politician.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6 text-center">
-                    <Image
-                      src={politician.photo || "/placeholder.svg"}
-                      alt={politician.name}
-                      width={80}
-                      height={80}
-                      className="rounded-full mx-auto mb-4 object-cover"
-                    />
-                    <h3 className="font-semibold text-lg text-gray-900 mb-2">{politician.name}</h3>
-                    <div className="flex items-center justify-center gap-1">
-                      <span
-                        className={`text-2xl font-bold ${
-                          politician.trend === "high" ? "text-green-600" : "text-red-600"
-                        }`}
-                      >
-                        {politician.trend === "high" ? "↗" : "↘"} {politician.score}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {politician.trend === "high" ? "High transparency" : "Needs improvement"}
-                    </p>
-                  </CardContent>
-                </Card>
+                <Link key={politician.id} href={`/politician/${politician.id}`}>
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                    <CardContent className="p-6 text-center">
+                      <Image
+                        src={politician.photo || "/placeholder.svg"}
+                        alt={politician.name}
+                        width={80}
+                        height={80}
+                        className="h-20 w-20 rounded-full mx-auto mb-4 object-cover"
+                      />
+                      <h3 className="font-semibold text-lg text-gray-900 mb-2">{politician.name}</h3>
+                      <div className="flex items-center justify-center gap-1">
+                        <span
+                          className={`text-2xl font-bold ${
+                            politician.trend === "high" ? "text-green-600" : "text-red-600"
+                          }`}
+                        >
+                          {politician.trend === "high" ? "↗" : "↘"} {politician.score}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {politician.trend === "high" ? "High transparency" : "Needs improvement"}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
             </div>
           </section>

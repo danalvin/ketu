@@ -35,7 +35,8 @@ class LegalCase(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     politician_id = Column(UUID(as_uuid=True), ForeignKey("politicians.id", ondelete="CASCADE"), nullable=False, index=True)
-    case_number = Column(String(100), unique=True, nullable=True)
+    # Case numbers can recur across different politicians in the same petition.
+    case_number = Column(String(100), nullable=True, index=True)
     title = Column(String(500), nullable=False)
     court = Column(String(255), nullable=True)
     status = Column(

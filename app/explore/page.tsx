@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Grid, List, Map } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { listPoliticians, Politician } from "@/lib/api"
+import { getStatsByCounty, getStatsByParty, listPoliticians, Politician } from "@/lib/api"
 
 export default function ExplorePage() {
   const [viewMode, setViewMode] = useState<"grid" | "list" | "map">("grid")
@@ -18,6 +18,8 @@ export default function ExplorePage() {
   const [partyFilter, setPartyFilter] = useState("all")
   const [sortBy, setSortBy] = useState("score")
   const [politicians, setPoliticians] = useState<Politician[]>([])
+  const [countyOptions, setCountyOptions] = useState<string[]>([])
+  const [partyOptions, setPartyOptions] = useState<string[]>([])
 
   useEffect(() => {
     let isMounted = true
@@ -51,6 +53,28 @@ export default function ExplorePage() {
   }, [currentPage, countyFilter, partyFilter])
 
   useEffect(() => {
+    let isMounted = true
+
+    async function loadFilterOptions() {
+      try {
+        const [countyStats, partyStats] = await Promise.all([getStatsByCounty(), getStatsByParty()])
+        if (!isMounted) return
+        setCountyOptions(countyStats.map((item) => item.county).filter(Boolean).sort((a, b) => a.localeCompare(b)))
+        setPartyOptions(partyStats.map((item) => item.party).filter(Boolean).sort((a, b) => a.localeCompare(b)))
+      } catch {
+        if (!isMounted) return
+        setCountyOptions([])
+        setPartyOptions([])
+      }
+    }
+
+    void loadFilterOptions()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(totalPages)
     }
@@ -81,9 +105,6 @@ export default function ExplorePage() {
     return pages
   }, [currentPage, totalPages])
 
-  const countyOptions = Array.from(new Set(politicians.map((p) => p.county).filter(Boolean) as string[])).sort()
-  const partyOptions = Array.from(new Set(politicians.map((p) => p.party).filter(Boolean) as string[])).sort()
-
   const renderPoliticianCard = (politician: Politician) => {
     const score = Math.round(Number(politician.transparency_score))
     return (
@@ -96,13 +117,21 @@ export default function ExplorePage() {
                 alt={politician.name}
                 width={80}
                 height={80}
-                className="rounded-full object-cover"
+                className="h-20 w-20 rounded-full object-cover flex-shrink-0"
               />
               <div className="flex-1">
                 <h3 className="font-semibold text-lg text-gray-900">{politician.name}</h3>
                 <p className="text-gray-600">{politician.position}</p>
                 <p className="text-sm text-gray-500">{politician.county || "County unavailable"}</p>
-                <Badge className="mt-2 bg-gray-100 text-gray-800">{politician.party || "Independent"}</Badge>
+                {politician.constituency ? (
+                  <p className="text-xs text-gray-500">{politician.constituency} Constituency</p>
+                ) : null}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Badge className="bg-gray-100 text-gray-800">{politician.party || "Independent"}</Badge>
+                  <Badge variant="outline" className={politician.is_alive ? "text-emerald-700" : "text-rose-700"}>
+                    {politician.is_alive ? "Alive" : "Deceased"}
+                  </Badge>
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-green-600">{score}</div>

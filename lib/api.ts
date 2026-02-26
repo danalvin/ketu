@@ -17,11 +17,19 @@ export interface Politician {
   position: string
   party: string | null
   county: string | null
+  constituency: string | null
+  parliamentary_role: string | null
+  parliamentary_profile_url: string | null
+  parliamentary_profile: Record<string, unknown> | null
   photo_url: string | null
   bio: string | null
+  history: string | null
+  date_of_birth: string | null
+  date_of_death: string | null
   transparency_score: number
   confidence_level: number
   is_active: boolean
+  is_alive: boolean
   created_at: string
   updated_at: string
 }
@@ -90,9 +98,11 @@ export interface OverviewStats {
 }
 
 export interface PoliticianStatsItem {
+  id: string
   name: string
   position: string
   party: string
+  photo_url: string | null
   transparency_score: number
   cases_count: number
   promises_count: number
@@ -102,6 +112,18 @@ export interface PoliticianStatsItem {
 export interface TopPoliticiansResponse {
   highest_scored: PoliticianStatsItem[]
   lowest_scored: PoliticianStatsItem[]
+}
+
+export interface PartyStatsItem {
+  party: string
+  politician_count: number
+  average_score: number
+}
+
+export interface CountyStatsItem {
+  county: string
+  politician_count: number
+  average_score: number
 }
 
 export interface PublicReport {
@@ -183,6 +205,7 @@ export async function listPoliticians(params?: {
   search?: string
   party?: string
   county?: string
+  constituency?: string
   position?: string
   min_score?: number
   max_score?: number
@@ -209,6 +232,14 @@ export async function getOverviewStats() {
 
 export async function getTopPoliticians(limit = 10) {
   return apiRequest<TopPoliticiansResponse>("/stats/top-politicians", undefined, { limit })
+}
+
+export async function getStatsByParty() {
+  return apiRequest<PartyStatsItem[]>("/stats/by-party")
+}
+
+export async function getStatsByCounty() {
+  return apiRequest<CountyStatsItem[]>("/stats/by-county")
 }
 
 export async function submitReport(payload: ReportCreatePayload) {

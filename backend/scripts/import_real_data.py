@@ -5,12 +5,13 @@ Import real data into the Kenya ni Yetu backend database.
 Supports:
 1) Fetching politicians from Wikidata (SPARQL)
 2) Importing politicians from local JSON
-3) Importing cases/promises from local CSV
+3) Merging detailed parliamentary profile JSON by politician name
+4) Importing cases/promises from local CSV
 
 Examples:
-    python scripts/import_real_data.py --source wikidata --limit 150 --export-file data/raw/wikidata_politicians.json
+    python scripts/import_real_data.py --source wikidata --limit 1500 --strict-political --include-history --export-file data/raw/wikidata_politicians.json
     python scripts/import_real_data.py --source json --politicians-file data/templates/politicians_template.json --dry-run
-    python scripts/import_real_data.py --source json --politicians-file data/curated/politicians.json --cases-file data/curated/cases.csv --promises-file data/curated/promises.csv
+    python scripts/import_real_data.py --source json --politicians-file data/curated/politicians.json --parliament-profiles-file data/curated/parliamentary_profiles.json --cases-file data/curated/cases.csv --promises-file data/curated/promises.csv
 """
 
 from __future__ import annotations
@@ -19,11 +20,13 @@ import argparse
 import csv
 import json
 import logging
+import re
 import sys
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.parse import quote, unquote
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -40,6 +43,57 @@ from app.models.promise import Promise, PromiseStatus  # noqa: E402
 
 
 logger = logging.getLogger("import_real_data")
+
+
+KENYAN_COUNTIES = [
+    "Baringo",
+    "Bomet",
+    "Bungoma",
+    "Busia",
+    "Elgeyo-Marakwet",
+    "Embu",
+    "Garissa",
+    "Homa Bay",
+    "Isiolo",
+    "Kajiado",
+    "Kakamega",
+    "Kericho",
+    "Kiambu",
+    "Kilifi",
+    "Kirinyaga",
+    "Kisii",
+    "Kisumu",
+    "Kitui",
+    "Kwale",
+    "Laikipia",
+    "Lamu",
+    "Machakos",
+    "Makueni",
+    "Mandera",
+    "Marsabit",
+    "Meru",
+    "Migori",
+    "Mombasa",
+    "Murang'a",
+    "Nairobi",
+    "Nakuru",
+    "Nandi",
+    "Narok",
+    "Nyamira",
+    "Nyandarua",
+    "Nyeri",
+    "Samburu",
+    "Siaya",
+    "Taita-Taveta",
+    "Tana River",
+    "Tharaka-Nithi",
+    "Trans Nzoia",
+    "Turkana",
+    "Uasin Gishu",
+    "Vihiga",
+    "Wajir",
+    "West Pokot",
+]
 
 
 @dataclass
@@ -82,8 +136,106 @@ def parse_date(value: Optional[str]) -> Optional[date]:
         return None
 
 
+def parse_bool(value: Any, default: bool = True) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "y", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "n", "off"}:
+            return False
+    return default
+
+
+def parse_float(value: Optional[str], field_name: str, row_label: str) -> Optional[float]:
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    if not cleaned:
+        return None
+    try:
+        return float(cleaned)
+    except ValueError:
+        logger.warning("Invalid %s '%s' for '%s'. Setting %s=NULL.", field_name, cleaned, row_label, field_name)
+        return None
+
+
+def default_photo_url(name: str) -> str:
+    return f"https://ui-avatars.com/api/?name={quote(name)}&background=0f766e&color=ffffff&size=256"
+
+
+def normalize_photo_url(raw_photo_url: Optional[str], name: str) -> str:
+    url = (raw_photo_url or "").strip()
+    if not url:
+        return default_photo_url(name)
+    if url.startswith("http://"):
+        url = "https://" + url[len("http://") :]
+    return url
+
+
+def normalize_county(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    cleaned = value.strip()
+    if not cleaned:
+        return None
+
+    lowered = cleaned.lower().replace(" county", "").replace(" county government", "").strip()
+    for county in KENYAN_COUNTIES:
+        if lowered == county.lower():
+            return county
+    return None
+
+
+def derive_county(*text_values: Optional[str]) -> Optional[str]:
+    candidates = [v for v in text_values if v]
+    if not candidates:
+        return None
+
+    combined = " ".join(candidates).lower()
+    for county in KENYAN_COUNTIES:
+        county_lower = county.lower()
+        if county_lower in combined:
+            return county
+    return None
+
+
+def normalize_constituency(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    cleaned = " ".join(value.strip().split())
+    if not cleaned:
+        return None
+    cleaned = re.sub(r"\s+constituency$", "", cleaned, flags=re.IGNORECASE)
+    return cleaned
+
+
+def derive_constituency(*text_values: Optional[str]) -> Optional[str]:
+    for text in text_values:
+        if not text:
+            continue
+        match = re.search(r"for\s+([A-Za-z' .-]+?)\s+Constituency", text, flags=re.IGNORECASE)
+        if match:
+            return normalize_constituency(match.group(1))
+    return None
+
+
+def wikipedia_title_from_url(url: Optional[str]) -> Optional[str]:
+    if not url:
+        return None
+    if "/wiki/" not in url:
+        return None
+    return unquote(url.rsplit("/wiki/", 1)[-1]).replace("_", " ").strip() or None
+
+
 class RealDataImporter:
     WIKIDATA_ENDPOINT = "https://query.wikidata.org/sparql"
+    WIKIPEDIA_SUMMARY_ENABLED: Optional[bool] = None
     POLITICAL_POSITION_KEYWORDS = [
         "president",
         "deputy president",
@@ -120,24 +272,86 @@ class RealDataImporter:
         return any(keyword in p for keyword in RealDataImporter.POLITICAL_POSITION_KEYWORDS)
 
     @staticmethod
-    def fetch_politicians_from_wikidata(limit: int, strict_political: bool = False) -> List[Dict[str, Any]]:
+    def is_political_description(description: Optional[str]) -> bool:
+        if not description:
+            return False
+        lowered = description.lower()
+        keywords = [
+            "politician",
+            "statesman",
+            "governor",
+            "senator",
+            "cabinet secretary",
+            "member of parliament",
+            "president",
+            "prime minister",
+        ]
+        return any(keyword in lowered for keyword in keywords)
+
+    @staticmethod
+    def fetch_wikipedia_summary(title: str) -> Optional[str]:
+        import httpx
+
+        if not title:
+            return None
+        if RealDataImporter.WIKIPEDIA_SUMMARY_ENABLED is False:
+            return None
+        url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(title)}"
+        try:
+            response = httpx.get(url, timeout=20.0, headers={"Accept": "application/json"})
+            if response.status_code == 403:
+                RealDataImporter.WIKIPEDIA_SUMMARY_ENABLED = False
+                logger.warning("Wikipedia summary API returned 403. Disabling history enrichment for remaining records.")
+                return None
+            if response.status_code != 200:
+                return None
+            RealDataImporter.WIKIPEDIA_SUMMARY_ENABLED = True
+            extract = response.json().get("extract")
+            return extract.strip() if extract else None
+        except Exception:
+            return None
+
+    @staticmethod
+    def fetch_politicians_from_wikidata(
+        limit: int,
+        strict_political: bool = False,
+        include_history: bool = False,
+    ) -> List[Dict[str, Any]]:
         """
         Fetch Kenyan politicians from Wikidata.
         """
         import httpx
 
         query = f"""
-        SELECT ?item ?itemLabel ?positionLabel ?partyLabel ?image ?dob WHERE {{
+        SELECT ?item ?itemLabel ?itemDescription ?positionLabel ?partyLabel ?image ?dob ?dod ?endDate ?countyLabel ?resCountyLabel ?article WHERE {{
           ?item wdt:P31 wd:Q5;
                 wdt:P27 wd:Q114;
-                p:P39 ?positionStatement.
-          ?positionStatement ps:P39 ?position.
+                wdt:P106 wd:Q82955.
 
-          FILTER NOT EXISTS {{ ?positionStatement pq:P582 ?endDate. }}
+          OPTIONAL {{
+            ?item p:P39 ?positionStatement.
+            ?positionStatement ps:P39 ?position.
+            OPTIONAL {{ ?positionStatement pq:P582 ?endDate. }}
+          }}
 
           OPTIONAL {{ ?item wdt:P102 ?party. }}
           OPTIONAL {{ ?item wdt:P18 ?image. }}
           OPTIONAL {{ ?item wdt:P569 ?dob. }}
+          OPTIONAL {{ ?item wdt:P570 ?dod. }}
+          OPTIONAL {{
+            ?item wdt:P19 ?birthPlace.
+            ?birthPlace wdt:P131* ?county.
+            ?county wdt:P31 wd:Q2852758.
+          }}
+          OPTIONAL {{
+            ?item wdt:P551 ?residence.
+            ?residence wdt:P131* ?resCounty.
+            ?resCounty wdt:P31 wd:Q2852758.
+          }}
+          OPTIONAL {{
+            ?article schema:about ?item;
+                     schema:isPartOf <https://en.wikipedia.org/>.
+          }}
 
           SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
         }}
@@ -161,28 +375,73 @@ class RealDataImporter:
         rows = payload.get("results", {}).get("bindings", [])
 
         deduped: Dict[str, Dict[str, Any]] = {}
+        quality_scores: Dict[str, int] = {}
         for row in rows:
             name = row.get("itemLabel", {}).get("value", "").strip()
             position = row.get("positionLabel", {}).get("value", "").strip()
-            if not name or not position:
+            description = row.get("itemDescription", {}).get("value", "").strip()
+            if not name:
                 continue
-            if strict_political and not RealDataImporter.is_political_position(position):
-                continue
+
+            if strict_political:
+                looks_political = RealDataImporter.is_political_position(position) or RealDataImporter.is_political_description(
+                    description
+                )
+                if not looks_political:
+                    continue
+
+            dob_raw = row.get("dob", {}).get("value")
+            dod_raw = row.get("dod", {}).get("value")
+            county_hint = normalize_county(row.get("countyLabel", {}).get("value"))
+            if not county_hint:
+                county_hint = normalize_county(row.get("resCountyLabel", {}).get("value"))
+            if not county_hint:
+                county_hint = derive_county(position, description)
+            constituency = derive_constituency(position, description)
+
+            article_url = row.get("article", {}).get("value")
+            wiki_title = wikipedia_title_from_url(article_url)
+            history = None
+            if include_history and wiki_title:
+                history = RealDataImporter.fetch_wikipedia_summary(wiki_title)
+
+            is_current_role = "endDate" not in row
+            has_photo = bool(row.get("image", {}).get("value"))
+            quality = 0
+            if is_current_role:
+                quality += 3
+            if RealDataImporter.is_political_position(position):
+                quality += 2
+            if has_photo:
+                quality += 1
+            if county_hint:
+                quality += 1
+            if history:
+                quality += 1
+
+            record = {
+                "name": name,
+                "position": position or "Kenyan politician",
+                "party": row.get("partyLabel", {}).get("value"),
+                "photo_url": normalize_photo_url(row.get("image", {}).get("value"), name),
+                "date_of_birth": parse_date(dob_raw[:10]) if dob_raw else None,
+                "date_of_death": parse_date(dod_raw[:10]) if dod_raw else None,
+                "constituency": constituency,
+                "parliamentary_role": "elected_constituency" if constituency else None,
+                "parliamentary_profile_url": None,
+                "parliamentary_profile": None,
+                "bio": description or None,
+                "history": history or description or None,
+                "county": county_hint,
+                "wikipedia_title": wiki_title,
+            }
 
             key = normalize_name(name)
-            if key in deduped:
+            if key in deduped and quality <= quality_scores.get(key, 0):
                 continue
 
-            dob = row.get("dob", {}).get("value")
-            deduped[key] = {
-                "name": name,
-                "position": position,
-                "party": row.get("partyLabel", {}).get("value"),
-                "photo_url": row.get("image", {}).get("value"),
-                "date_of_birth": parse_date(dob[:10]) if dob else None,
-                "bio": None,
-                "county": None,
-            }
+            deduped[key] = record
+            quality_scores[key] = quality
 
         logger.info("Fetched %s unique politician records from Wikidata.", len(deduped))
         return list(deduped.values())
@@ -205,6 +464,48 @@ class RealDataImporter:
         return records
 
     @staticmethod
+    def load_parliament_profiles_from_json(file_path: Path) -> Dict[str, Dict[str, Any]]:
+        with file_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        if not isinstance(data, list):
+            raise ValueError("Parliament profiles JSON must be a list of objects.")
+
+        records: Dict[str, Dict[str, Any]] = {}
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            name = (item.get("name") or "").strip()
+            if not name:
+                continue
+            records[normalize_name(name)] = item
+
+        logger.info("Loaded %s parliamentary profile records from %s", len(records), file_path)
+        return records
+
+    @staticmethod
+    def merge_parliament_profiles(
+        politicians: List[Dict[str, Any]],
+        profiles_by_name: Dict[str, Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        merged: Dict[str, Dict[str, Any]] = {
+            normalize_name((item.get("name") or "").strip()): dict(item)
+            for item in politicians
+            if (item.get("name") or "").strip()
+        }
+
+        for key, profile in profiles_by_name.items():
+            existing = merged.get(key, {})
+            combined = {**existing, **profile}
+            if not combined.get("name") and existing.get("name"):
+                combined["name"] = existing["name"]
+            if not combined.get("position"):
+                combined["position"] = "Member of Parliament"
+            merged[key] = combined
+
+        return list(merged.values())
+
+    @staticmethod
     def upsert_politicians(db: Session, records: List[Dict[str, Any]], stats: ImportStats) -> Dict[str, str]:
         existing = {
             normalize_name(p.name): p
@@ -224,22 +525,52 @@ class RealDataImporter:
             date_of_birth = rec.get("date_of_birth")
             if isinstance(date_of_birth, str):
                 date_of_birth = parse_date(date_of_birth)
+            date_of_death = rec.get("date_of_death")
+            if isinstance(date_of_death, str):
+                date_of_death = parse_date(date_of_death)
+
+            constituency = normalize_constituency(rec.get("constituency")) or derive_constituency(
+                rec.get("position"),
+                rec.get("bio"),
+                rec.get("history"),
+            )
+            parliamentary_role = (rec.get("parliamentary_role") or "").strip() or None
+            parliamentary_profile_url = (rec.get("parliamentary_profile_url") or "").strip() or None
+            parliamentary_profile = rec.get("parliamentary_profile")
+            if parliamentary_profile is not None and not isinstance(parliamentary_profile, dict):
+                parliamentary_profile = None
+
+            county = normalize_county(rec.get("county")) or derive_county(
+                rec.get("position"),
+                constituency,
+                rec.get("bio"),
+                rec.get("history"),
+            )
+            photo_url = normalize_photo_url(rec.get("photo_url"), name)
+            bio = (rec.get("bio") or "").strip() or None
+            history = (rec.get("history") or "").strip() or bio
 
             if politician is None:
                 politician = Politician(
                     name=name,
                     position=position,
                     party=rec.get("party"),
-                    county=rec.get("county"),
-                    photo_url=rec.get("photo_url"),
-                    bio=rec.get("bio"),
+                    county=county,
+                    constituency=constituency,
+                    parliamentary_role=parliamentary_role,
+                    parliamentary_profile_url=parliamentary_profile_url,
+                    parliamentary_profile=parliamentary_profile,
+                    photo_url=photo_url,
+                    bio=bio,
+                    history=history,
                     date_of_birth=date_of_birth,
+                    date_of_death=date_of_death,
                     education=rec.get("education"),
                     contact_info=rec.get("contact_info"),
                     social_media=rec.get("social_media"),
                     transparency_score=rec.get("transparency_score", 0),
                     confidence_level=rec.get("confidence_level", 0),
-                    is_active=bool(rec.get("is_active", True)),
+                    is_active=parse_bool(rec.get("is_active"), default=True),
                 )
                 db.add(politician)
                 db.flush()
@@ -250,10 +581,16 @@ class RealDataImporter:
                 updates = {
                     "position": position,
                     "party": rec.get("party"),
-                    "county": rec.get("county"),
-                    "photo_url": rec.get("photo_url"),
-                    "bio": rec.get("bio"),
+                    "county": county,
+                    "constituency": constituency,
+                    "parliamentary_role": parliamentary_role,
+                    "parliamentary_profile_url": parliamentary_profile_url,
+                    "parliamentary_profile": parliamentary_profile,
+                    "photo_url": photo_url,
+                    "bio": bio,
+                    "history": history,
                     "date_of_birth": date_of_birth,
+                    "date_of_death": date_of_death,
                     "education": rec.get("education"),
                     "contact_info": rec.get("contact_info"),
                     "social_media": rec.get("social_media"),
@@ -277,7 +614,7 @@ class RealDataImporter:
                         updated = True
 
                 if "is_active" in rec:
-                    is_active_value = bool(rec.get("is_active"))
+                    is_active_value = parse_bool(rec.get("is_active"), default=politician.is_active)
                     if politician.is_active != is_active_value:
                         politician.is_active = is_active_value
                         updated = True
@@ -295,13 +632,6 @@ class RealDataImporter:
         politician_map: Dict[str, str],
         stats: ImportStats,
     ) -> None:
-        existing_cases_with_number = db.query(LegalCase).filter(LegalCase.case_number.isnot(None)).all()
-        case_number_owner: Dict[str, str] = {
-            case.case_number: str(case.politician_id)
-            for case in existing_cases_with_number
-            if case.case_number
-        }
-
         with csv_path.open("r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
@@ -327,16 +657,6 @@ class RealDataImporter:
                     continue
 
                 incoming_case_number = (row.get("case_number") or "").strip() or None
-                if incoming_case_number:
-                    owner_politician_id = case_number_owner.get(incoming_case_number)
-                    if owner_politician_id and owner_politician_id != politician_id:
-                        logger.warning(
-                            "Case number '%s' already belongs to another politician; setting case_number=NULL for '%s' (%s).",
-                            incoming_case_number,
-                            title,
-                            politician_name,
-                        )
-                        incoming_case_number = None
 
                 severity_raw = (row.get("severity") or "").strip().lower()
                 severity = None
@@ -349,7 +669,8 @@ class RealDataImporter:
                 case = None
                 if incoming_case_number:
                     case = db.query(LegalCase).filter(
-                        LegalCase.case_number == incoming_case_number
+                        LegalCase.politician_id == politician_id,
+                        func.lower(LegalCase.case_number) == incoming_case_number.lower(),
                     ).first()
 
                 if case is None:
@@ -384,10 +705,7 @@ class RealDataImporter:
                 case.source_urls = source_urls
 
                 impact_score_raw = (row.get("impact_score") or "").strip()
-                case.impact_score = float(impact_score_raw) if impact_score_raw else None
-
-                if case.case_number:
-                    case_number_owner[case.case_number] = str(case.politician_id)
+                case.impact_score = parse_float(impact_score_raw, "impact_score", title)
 
     @staticmethod
     def import_promises_from_csv(
@@ -467,13 +785,23 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Import real data into Kenya ni Yetu backend")
     parser.add_argument("--source", choices=["wikidata", "json"], required=True)
     parser.add_argument("--politicians-file", type=Path, help="Path to politicians JSON file (required for --source json)")
+    parser.add_argument(
+        "--parliament-profiles-file",
+        type=Path,
+        help="Optional path to detailed parliamentary profiles JSON to merge by politician name",
+    )
     parser.add_argument("--cases-file", type=Path, help="Optional path to legal cases CSV")
     parser.add_argument("--promises-file", type=Path, help="Optional path to promises CSV")
-    parser.add_argument("--limit", type=int, default=150, help="Wikidata fetch limit")
+    parser.add_argument("--limit", type=int, default=1500, help="Wikidata fetch limit")
     parser.add_argument(
         "--strict-political",
         action="store_true",
         help="Filter Wikidata rows to likely political offices and exclude religious roles",
+    )
+    parser.add_argument(
+        "--include-history",
+        action="store_true",
+        help="Fetch short political history summaries from English Wikipedia where available",
     )
     parser.add_argument("--export-file", type=Path, help="Optional path to export fetched politician records as JSON")
     parser.add_argument("--dry-run", action="store_true", help="Run import without committing changes")
@@ -494,7 +822,15 @@ def main() -> int:
             return 2
         politicians = importer.load_politicians_from_json(args.politicians_file)
     else:
-        politicians = importer.fetch_politicians_from_wikidata(args.limit, strict_political=args.strict_political)
+        politicians = importer.fetch_politicians_from_wikidata(
+            args.limit,
+            strict_political=args.strict_political,
+            include_history=args.include_history,
+        )
+
+    if args.parliament_profiles_file:
+        profile_map = importer.load_parliament_profiles_from_json(args.parliament_profiles_file)
+        politicians = importer.merge_parliament_profiles(politicians, profile_map)
 
     if args.export_file:
         args.export_file.parent.mkdir(parents=True, exist_ok=True)

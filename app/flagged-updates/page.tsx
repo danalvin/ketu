@@ -262,7 +262,7 @@ export default function FlaggedUpdatesPage() {
                       alt={update.politician_name}
                       width={60}
                       height={60}
-                      className="rounded-full object-cover"
+                      className="h-16 w-16 rounded-full object-cover flex-shrink-0"
                     />
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-2 gap-2">

@@ -27,11 +27,14 @@ export default async function FeaturedPoliticians() {
                   alt={politician.name}
                   width={120}
                   height={120}
-                  className="rounded-full mx-auto object-cover group-hover:scale-105 transition-transform"
+                  className="h-28 w-28 rounded-full mx-auto object-cover group-hover:scale-105 transition-transform"
                 />
               </div>
               <h3 className="font-semibold text-lg text-gray-900 mb-1">{politician.name}</h3>
               <p className="text-gray-600 text-sm mb-3">{politician.position}</p>
+              <p className={`text-xs mb-3 ${politician.is_alive ? "text-emerald-700" : "text-rose-700"}`}>
+                {politician.is_alive ? "Alive" : "Deceased"}
+              </p>
               <div className="space-y-2">
                 <p className="text-sm text-gray-500">
                   Approval Score: {Math.round(Number(politician.transparency_score))}%

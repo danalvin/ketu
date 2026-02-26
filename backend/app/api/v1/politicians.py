@@ -32,6 +32,7 @@ async def list_politicians(
     search: Optional[str] = Query(None, description="Search by name or position"),
     party: Optional[str] = Query(None, description="Filter by party"),
     county: Optional[str] = Query(None, description="Filter by county"),
+    constituency: Optional[str] = Query(None, description="Filter by constituency"),
     position: Optional[str] = Query(None, description="Filter by position"),
     min_score: Optional[float] = Query(None, ge=0, le=100, description="Minimum transparency score"),
     max_score: Optional[float] = Query(None, ge=0, le=100, description="Maximum transparency score"),
@@ -44,6 +45,7 @@ async def list_politicians(
     - **search**: Search by politician name or position
     - **party**: Filter by political party
     - **county**: Filter by county
+    - **constituency**: Filter by constituency
     - **position**: Filter by position
     - **min_score**: Minimum transparency score
     - **max_score**: Maximum transparency score
@@ -66,6 +68,9 @@ async def list_politicians(
 
     if county:
         query = query.filter(Politician.county.ilike(f"%{county}%"))
+
+    if constituency:
+        query = query.filter(Politician.constituency.ilike(f"%{constituency}%"))
 
     if position:
         query = query.filter(Politician.position.ilike(f"%{position}%"))
@@ -237,9 +242,15 @@ async def create_politician(
         position=politician_data.position,
         party=politician_data.party,
         county=politician_data.county,
+        constituency=politician_data.constituency,
+        parliamentary_role=politician_data.parliamentary_role,
+        parliamentary_profile_url=politician_data.parliamentary_profile_url,
+        parliamentary_profile=politician_data.parliamentary_profile,
         photo_url=politician_data.photo_url,
         bio=politician_data.bio,
+        history=politician_data.history,
         date_of_birth=politician_data.date_of_birth,
+        date_of_death=politician_data.date_of_death,
         education=politician_data.education,
         contact_info=politician_data.contact_info,
         social_media=politician_data.social_media,

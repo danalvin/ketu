@@ -32,7 +32,7 @@ async def global_search(
     Global search across politicians, legal cases, and promises.
 
     Searches through:
-    - Politicians: name, position, party, county, bio
+    - Politicians: name, position, party, county, constituency, parliamentary role, bio, history
     - Legal Cases: title, description, case_number, court
     - Promises: title, description, category
 
@@ -48,7 +48,10 @@ async def global_search(
             Politician.position.ilike(search_filter),
             Politician.party.ilike(search_filter),
             Politician.county.ilike(search_filter),
-            Politician.bio.ilike(search_filter)
+            Politician.constituency.ilike(search_filter),
+            Politician.parliamentary_role.ilike(search_filter),
+            Politician.bio.ilike(search_filter),
+            Politician.history.ilike(search_filter),
         )
     ).order_by(Politician.transparency_score.desc()).limit(limit)
 
@@ -97,7 +100,7 @@ async def search_politicians_only(
     """
     Search only politicians.
 
-    Searches through name, position, party, county, and bio.
+    Searches through name, position, party, county, constituency, parliamentary role, bio, and history.
     Returns up to 'limit' results ordered by transparency score.
     """
     search_filter = f"%{q}%"
@@ -109,7 +112,10 @@ async def search_politicians_only(
             Politician.position.ilike(search_filter),
             Politician.party.ilike(search_filter),
             Politician.county.ilike(search_filter),
-            Politician.bio.ilike(search_filter)
+            Politician.constituency.ilike(search_filter),
+            Politician.parliamentary_role.ilike(search_filter),
+            Politician.bio.ilike(search_filter),
+            Politician.history.ilike(search_filter),
         )
     ).order_by(Politician.transparency_score.desc()).limit(limit).all()
 

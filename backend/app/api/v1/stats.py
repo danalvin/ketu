@@ -9,6 +9,7 @@ from app.models.report import FlaggedReport, ReportStatus, ReportPriority
 from app.models.user import User
 from pydantic import BaseModel
 from typing import Dict, List
+from uuid import UUID
 
 router = APIRouter()
 
@@ -36,9 +37,11 @@ class OverviewStats(BaseModel):
 
 class PoliticianStatsItem(BaseModel):
     """Schema for individual politician statistics."""
+    id: UUID
     name: str
     position: str
     party: str
+    photo_url: str | None = None
     transparency_score: float
     cases_count: int
     promises_count: int
@@ -199,9 +202,11 @@ async def get_top_politicians(
     def format_politician(result) -> PoliticianStatsItem:
         politician = result[0]
         return PoliticianStatsItem(
+            id=politician.id,
             name=politician.name,
             position=politician.position,
             party=politician.party or "Independent",
+            photo_url=politician.photo_url,
             transparency_score=float(politician.transparency_score),
             cases_count=result.cases_count or 0,
             promises_count=result.promises_count or 0,
